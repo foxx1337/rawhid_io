@@ -1,0 +1,21 @@
+{
+  "name": "rawhid",
+  "version": "0.0.1",
+  "description": "Test for rawhid devices",
+  "main": "index.js",
+  "scripts": {
+    "rawhid": "./node_modules/ts-node/dist/bin.js src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "foxx1337",
+  "license": "ISC",
+  "dependencies": {
+    "@types/node-hid": "^1.2.0",
+    "node-hid": "^1.2.0",
+    "ts-node": "^8.7.0",
+    "typescript": "^3.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^13.9.2"
+  }
+}
