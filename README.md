@@ -26,3 +26,5 @@
 
 Use [https://microsoft.github.io/TypeSearch/](TypeSearch) to check whether a module has associated
 type info available to be installed.
+
+There's also [https://www.zer7.com/software/hidsharp](HIDSharp) for accessing HID devices.
