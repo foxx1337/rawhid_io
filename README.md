@@ -26,10 +26,10 @@
     npm install --save node-hid @types/node-hid
     ```
 
-Use [https://microsoft.github.io/TypeSearch/](TypeSearch) to check whether a module has associated
+Use [TypeSearch](https://microsoft.github.io/TypeSearch/) to check whether a module has associated
 type info available to be installed.
 
-There's also [https://www.zer7.com/software/hidsharp](HIDSharp) for accessing HID devices.
+There's also [HIDSharp](https://www.zer7.com/software/hidsharp) for accessing HID devices.
 
 To make the massdrop CTRL (vendor id = 04d8) devices user accessible copy `50-massdrop-ctrl.rules`
 to `/etc/udev/rules.d` and reload the daemon:
