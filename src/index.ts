@@ -10,15 +10,23 @@ const usage = 0x61;
 
 setDriverType('hidraw');
 
-const deviceInfo = devices().find((dev) => {
-    console.log(`${dev.path}; vendorId=${dev.vendorId}, productId=${dev.productId}, usagePage=${dev.usagePage}, usage=${dev.usage}.`);
+let deviceInfo = devices().find((dev) => {
+    console.log(dev);
     var isCtrl = dev.vendorId === vendorId && dev.productId === productId;
     return isCtrl && dev.usagePage === usagePage && dev.usage === usage;
 });
 
+let path: string;
+
 if (deviceInfo) {
-    console.log(`Detected Massdrop CTRL at ${deviceInfo.path}.`);
-    let ctrl = new HID(deviceInfo.path);
+    path = deviceInfo.path;
+} else {
+    path = '/dev/hidraw8';
+}
+
+if (path) {
+    console.log(`Detected Massdrop CTRL at ${path}.`);
+    let ctrl = new HID(path);
 
     ctrl.on('data', (data) => {
         console.log('got data from the ctrl:');
@@ -28,7 +36,12 @@ if (deviceInfo) {
         console.log(err);
     });
     
-    const bytesWritten = ctrl.write([0, 100]);
+    const data: number[] = [];
+    for (let i = 0; i < 64; i++) {
+        data[i] = i;
+    }
+    data[0] = 1;
+    const bytesWritten = ctrl.write(data);
     console.log(`sent ${bytesWritten} bytes to the ctrl`);
 
     setTimeout(() => {

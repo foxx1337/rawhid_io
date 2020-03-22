@@ -1,4 +1,6 @@
-# Installation
+# Usb raw HID tester for Massdrop CTRL keyboard.
+
+## Installation
 
 1. init npm
 
@@ -28,3 +30,11 @@ Use [https://microsoft.github.io/TypeSearch/](TypeSearch) to check whether a mod
 type info available to be installed.
 
 There's also [https://www.zer7.com/software/hidsharp](HIDSharp) for accessing HID devices.
+
+To make the massdrop CTRL (vendor id = 04d8) devices user accessible copy `50-massdrop-ctrl.rules`
+to `/etc/udev/rules.d` and reload the daemon:
+
+```bash
+sudo udevadm control --reload
+sudo udevadm trigger
+```
