@@ -21,7 +21,18 @@ let path: string;
 if (deviceInfo) {
     path = deviceInfo.path;
 } else {
-    path = '/dev/hidraw8';
+    path = '/dev/hidraw7';
+}
+
+function say(device: HID, message: number) {
+    const data = [];
+    for (let i = 0; i < 64; i++) {
+        data[i] = 0;
+    }
+
+    data[0] = message;
+    const bytesWritten = device.write(data);
+    console.log(`Sent ${bytesWritten} bytes to the device.`);
 }
 
 if (path) {
@@ -36,13 +47,7 @@ if (path) {
         console.log(err);
     });
     
-    const data: number[] = [];
-    for (let i = 0; i < 64; i++) {
-        data[i] = i;
-    }
-    data[0] = 1;
-    const bytesWritten = ctrl.write(data);
-    console.log(`sent ${bytesWritten} bytes to the ctrl`);
+    say(ctrl, 1);
 
     setTimeout(() => {
         console.log('ping\n');
@@ -59,17 +64,23 @@ function consoleLoop(device) {
         output: process.stdout
     });
     
-    console.log("Write exit to quit.");
+    console.log('Write exit to quit.');
+    console.log('Other commands:');
+    console.log('   hello - retrieves the initial identifier from the keyboard - "CTRL".');
+    console.log('   lights - toggles the keyboard lights status (use an on-screen kb to enter).');
     rl.on('line', (line) => {
         console.log(`You entered: ${line}`);
     
         if (line === 'exit') {
             exit(device);
+        } else if (line === 'hello') {
+            say(device, 1);
+        } else if (line === 'lights') {
+            say(device, 2);
         }
     }).on('close', () => {
         exit(device);
-    });
-    
+    });   
 }
 
 function exit(device) {
