@@ -44,14 +44,16 @@ function say(device: HID, message: number, ...args: number[]) {
     console.log(`Sent ${bytesWritten} bytes to the device.`);
 }
 
+function echo(device: HID) {
+    const data = device.readSync();
+    console.log('got', data);
+}
+
 if (path) {
     console.log(`Detected Massdrop CTRL at ${path}.`);
     let ctrl = new HID(path);
 
-    ctrl.on('data', (data) => {
-        console.log('got data from the ctrl:');
-        console.log(data);
-    }).on('error', (err) => {
+    ctrl.on('error', (err) => {
         console.log('got error from the ctrl:');
         console.log(err);
     });
@@ -85,9 +87,11 @@ function consoleLoop(device) {
                 exit(device);
             case 'hello':
                 say(device, 1);
+                echo(device);
                 break;
             case 'lights':
                 say(device, 2);
+                echo(device);
                 break;
             default: {
                 const tokens = line.split(/\s+/);
@@ -95,12 +99,24 @@ function consoleLoop(device) {
                     case 'led': {
                         const led = Number(tokens[1]);
                         say(device, 3, led);
+                        echo(device);
                         break;
                     }
                     case 'mode': {
                         const mode = Number(tokens[1]);
                         say(device, 4, mode);
+                        echo(device);
                         break;
+                    }
+                    case 'tree': {
+                        for (let i = 1; i < 87; i += 1) {
+                            say(device, 3, i);
+                            const ans = device.readSync();
+                            if (ans[0] != 4 || ans[1] != 0) {
+                                console.log('Something went wrong.', ans);
+                                break;
+                            }
+                        }
                     }
                 }
             }
