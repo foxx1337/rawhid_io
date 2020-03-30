@@ -11,9 +11,12 @@ const usage = 0x61;
 setDriverType('hidraw');
 
 let deviceInfo = devices().find((dev) => {
-    console.log(dev);
     var isCtrl = dev.vendorId === vendorId && dev.productId === productId;
-    return isCtrl && dev.usagePage === usagePage && dev.usage === usage;
+    if (isCtrl) {
+        console.log(dev);
+    }
+    //return isCtrl && dev.usagePage === usagePage && dev.usage === usage;
+    return dev.interface === 1;
 });
 
 let path: string;
@@ -22,15 +25,21 @@ if (deviceInfo) {
     path = deviceInfo.path;
 } else {
     path = '/dev/hidraw7';
+    console.log(`Can't detect the keyboard, defaulting to ${path}.`);
 }
 
-function say(device: HID, message: number) {
+function say(device: HID, message: number, ...args: number[]) {
     const data = [];
     for (let i = 0; i < 64; i++) {
         data[i] = 0;
     }
 
     data[0] = message;
+
+    for (let i = 0; i < args.length; i++) {
+        data[1 + i] = args[i];
+    }
+
     const bytesWritten = device.write(data);
     console.log(`Sent ${bytesWritten} bytes to the device.`);
 }
@@ -47,7 +56,7 @@ if (path) {
         console.log(err);
     });
     
-    say(ctrl, 1);
+    //say(ctrl, 1);
 
     setTimeout(() => {
         console.log('ping\n');
@@ -68,15 +77,33 @@ function consoleLoop(device) {
     console.log('Other commands:');
     console.log('   hello - retrieves the initial identifier from the keyboard - "CTRL".');
     console.log('   lights - toggles the keyboard lights status (use an on-screen kb to enter).');
+    console.log('   led N - makes the led at position N fully green.');
+    console.log('   mode N - switches illumination mode to N.');
     rl.on('line', (line) => {
-        console.log(`You entered: ${line}`);
-    
-        if (line === 'exit') {
-            exit(device);
-        } else if (line === 'hello') {
-            say(device, 1);
-        } else if (line === 'lights') {
-            say(device, 2);
+        switch (line) {
+            case 'exit':
+                exit(device);
+            case 'hello':
+                say(device, 1);
+                break;
+            case 'lights':
+                say(device, 2);
+                break;
+            default: {
+                const tokens = line.split(/\s+/);
+                switch (tokens[0]) {
+                    case 'led': {
+                        const led = Number(tokens[1]);
+                        say(device, 3, led);
+                        break;
+                    }
+                    case 'mode': {
+                        const mode = Number(tokens[1]);
+                        say(device, 4, mode);
+                        break;
+                    }
+                }
+            }
         }
     }).on('close', () => {
         exit(device);
