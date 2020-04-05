@@ -31,8 +31,8 @@ type info available to be installed.
 
 There's also [HIDSharp](https://www.zer7.com/software/hidsharp) for accessing HID devices.
 
-To make the massdrop CTRL (vendor id = 04d8) devices user accessible copy `50-massdrop-ctrl.rules`
-to `/etc/udev/rules.d` and reload the daemon:
+To make the massdrop CTRL (vendor id = 04d8) devices are user accessible copy
+`50-massdrop-ctrl.rules` to `/etc/udev/rules.d` and reload the daemon:
 
 ```bash
 sudo udevadm control --reload
