@@ -30,7 +30,7 @@ function echo(device: HID) {
 }
 
 function hexToRgbArray(input) {
-    const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+    const shorthandRegex = /^(?:#|0x)?([a-f\d])([a-f\d])([a-f\d])$/i;
     const hex = input.replace(shorthandRegex, (match, r, g, b) => r + r + g + g + b + b);
 
     const result = /^(?:#|0x)?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
