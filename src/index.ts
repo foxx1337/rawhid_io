@@ -8,26 +8,6 @@ const productId = 0xEED2;
 const usagePage = 0xFF60;
 const usage = 0x61;
 
-setDriverType('hidraw');
-
-let deviceInfo = devices().find((dev) => {
-    var isCtrl = dev.vendorId === vendorId && dev.productId === productId;
-    if (isCtrl) {
-        console.log(dev);
-    }
-    //return isCtrl && dev.usagePage === usagePage && dev.usage === usage;
-    return dev.interface === 1;
-});
-
-let path: string;
-
-if (deviceInfo) {
-    path = deviceInfo.path;
-} else {
-    path = '/dev/hidraw7';
-    console.log(`Can't detect the keyboard, defaulting to ${path}.`);
-}
-
 function say(device: HID, message: number, ...args: number[]) {
     const data = [];
     for (let i = 0; i < 64; i++) {
@@ -49,25 +29,79 @@ function echo(device: HID) {
     console.log('got', data);
 }
 
-if (path) {
-    console.log(`Detected Massdrop CTRL at ${path}.`);
-    let ctrl = new HID(path);
+function hexToRgbArray(input) {
+    const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+    const hex = input.replace(shorthandRegex, (match, r, g, b) => r + r + g + g + b + b);
 
-    ctrl.on('error', (err) => {
-        console.log('got error from the ctrl:');
-        console.log(err);
-    });
-    
-    //say(ctrl, 1);
-
-    setTimeout(() => {
-        console.log('ping\n');
-    }, 2000);
-
-    consoleLoop(ctrl);
-} else {
-    console.log('Couldn\'t find CTRL.');
+    const result = /^(?:#|0x)?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? [
+        parseInt(result[1], 16),
+        parseInt(result[2], 16),
+        parseInt(result[3], 16)
+    ] : [0, 0, 0];
 }
+
+const commands: { [index: string]: any } = {
+    hello: {
+        ctrl_hid_code: 3,
+        description: 'hello - Retrieves the initial identifier from the keyboard - "CTRLHID 1.0.0".'
+    },
+    lights: {
+        ctrl_hid_code: 4,
+        description: 'lights - Toggles the keyboard lights status (use an on-screen kb to enter).',
+    },
+    led: {
+        ctrl_hid_code: 5,
+        description: 'led N [color] - Colors the led at position N. Use "255 0 0" or "#FF0000" for red, default is green.'
+    },
+    leds: {
+        ctrl_hid_code: 6,
+        description: 'leds start [hex colors] - From the led at start, paint each following led with the given hex color.'
+    },
+    mode: {
+        ctrl_hid_code: 7,
+        description: 'mode N - Switches illumination to mode N.'
+    }
+};
+
+function openCtrlHidDevice() {
+    const candidateCtrlDevices = devices().filter(
+        dev => dev.vendorId === vendorId && dev.productId === productId);
+    
+    // usage and usagePage only valid on Windows and OS X
+    const hasUsage = process.platform === 'win32' || process.platform === 'darwin';
+
+    const deviceInfo = candidateCtrlDevices.find(dev =>
+        hasUsage
+            ? dev.usage === usage && dev.usagePage === usagePage
+            : dev.interface === 1);
+
+    if (typeof deviceInfo !== 'undefined') {
+        return new HID(deviceInfo.path);
+    }
+
+    return null;
+}
+
+const ctrl = openCtrlHidDevice();
+
+if (typeof ctrl === 'undefined') {
+    console.log('Failed to open CTRL. Exiting.');
+    exit(ctrl);
+}
+
+ctrl.on('error', (err) => {
+    console.log('Error from the CTRL:');
+    console.log(err);
+    console.log('Exiting.');
+    exit(ctrl);
+});
+    
+setTimeout(() => {
+    console.log('ping\n');
+}, 2000);
+
+consoleLoop(ctrl);
 
 function consoleLoop(device) {
     let rl = readline.createInterface({
@@ -77,20 +111,19 @@ function consoleLoop(device) {
     
     console.log('Write exit to quit.');
     console.log('Other commands:');
-    console.log('   hello - retrieves the initial identifier from the keyboard - "CTRL".');
-    console.log('   lights - toggles the keyboard lights status (use an on-screen kb to enter).');
-    console.log('   led N - makes the led at position N fully green.');
-    console.log('   mode N - switches illumination mode to N.');
+    for (let command in commands) {
+        console.log(`   ${commands[command].description}`);
+    }
     rl.on('line', (line) => {
         switch (line) {
             case 'exit':
                 exit(device);
             case 'hello':
-                say(device, 1);
+                say(device, commands.hello.ctrl_hid_code);
                 echo(device);
                 break;
             case 'lights':
-                say(device, 2);
+                say(device, commands.lights.ctrl_hid_code);
                 echo(device);
                 break;
             default: {
@@ -98,25 +131,34 @@ function consoleLoop(device) {
                 switch (tokens[0]) {
                     case 'led': {
                         const led = Number(tokens[1]);
-                        say(device, 3, led);
+                        let colors: number[];
+                        if (tokens.length === 5) {
+                            colors = [Number(tokens[2]), Number(tokens[3]), Number(tokens[4])];
+                        } else if (tokens.length === 3) {
+                            colors = hexToRgbArray(tokens[2]);
+                        } else {
+                            colors = [0x00, 0xff, 0x00];
+                        }
+                        say(device, commands.led.ctrl_hid_code, led, ...colors);
+                        echo(device);
+                        break;
+                    }
+                    case 'leds': {
+                        const led = Number(tokens[1]);
+                        const nLeds = tokens.length - 2;
+                        let colors = [];
+                        for (let i = 0; i < nLeds; i++) {
+                            colors = colors.concat(hexToRgbArray(tokens[2 + i]));
+                        }
+                        say(device, commands.leds.ctrl_hid_code, led, nLeds, ...colors)
                         echo(device);
                         break;
                     }
                     case 'mode': {
                         const mode = Number(tokens[1]);
-                        say(device, 4, mode);
+                        say(device, commands.mode.ctrl_hid_code, mode);
                         echo(device);
                         break;
-                    }
-                    case 'tree': {
-                        for (let i = 1; i < 87; i += 1) {
-                            say(device, 3, i);
-                            const ans = device.readSync();
-                            if (ans[0] != 4 || ans[1] != 0) {
-                                console.log('Something went wrong.', ans);
-                                break;
-                            }
-                        }
                     }
                 }
             }
@@ -127,7 +169,10 @@ function consoleLoop(device) {
 }
 
 function exit(device) {
-    device.close();
+    if (typeof device !== 'undefined') {
+        device.close();
+    }
+
     console.log("Done. Exiting.")
     process.exit(0);
 }
