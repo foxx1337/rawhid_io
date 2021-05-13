@@ -38,3 +38,9 @@ To make the massdrop CTRL (vendor id = 04d8) devices are user accessible copy
 sudo udevadm control --reload
 sudo udevadm trigger
 ```
+
+## Running
+
+```bash
+npm run rawhid
+```
